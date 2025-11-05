@@ -1,16 +1,24 @@
+import 'package:alttask/screens/auth/auth_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'auth/auth_provider.dart';
-import 'screens/login_screen.dart';
+import 'services/auth_service.dart';
 import 'screens/todo_list_screen.dart';
 import 'theme_provider.dart';
+import 'category_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'user/users.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => AuthProvider()),
+        Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => CategoryProvider()),
       ],
       child: const AltTask(),
     ),
@@ -25,7 +33,7 @@ class AltTask extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
-          title: 'Smart To-Do List',
+          title: 'AltTask',
           theme: ThemeData(
             primarySwatch: Colors.blue,
             useMaterial3: true,
@@ -53,33 +61,37 @@ class AltTask extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AuthProvider>(context, listen: false).checkCurrentUser();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        if (authProvider.currentUser != null) {
+    final authService = Provider.of<AuthService>(context);
+
+    return StreamBuilder<fb_auth.User?>(
+      stream: authService.user,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasData) {
+          final fb_auth.User firebaseUser = snapshot.data!;
+          final User appUser = User(
+            id: firebaseUser.uid,
+            username: firebaseUser.email ?? '',
+            password: '', // Password is not available from firebase auth
+            personalCode:
+                '', // Personal code is not available from firebase auth
+            createdAt: firebaseUser.metadata.creationTime ?? DateTime.now(),
+          );
           return TodoListScreen(
-            user: authProvider.currentUser!.user,
-            onLogout: () => authProvider.logout(),
+            user: appUser,
+            themeProvider: Provider.of<ThemeProvider>(context),
           );
         } else {
-          return LoginScreen();
+          return const AuthScreen();
         }
       },
     );

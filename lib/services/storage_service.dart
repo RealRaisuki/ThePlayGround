@@ -22,6 +22,11 @@ class StorageService {
       for (final jsonString in tasksJson) {
         try {
           final Map<String, dynamic> taskMap = jsonDecode(jsonString);
+          if (taskMap.containsKey('category') && taskMap['category'] is int) {
+            taskMap['categoryId'] = 'personal'; // Default category
+          } else if (taskMap.containsKey('category') && taskMap['category'] is String) {
+            taskMap['categoryId'] = taskMap['category'];
+          }
           final task = TodoItem.fromJson(taskMap);
 
           // Validate the loaded task

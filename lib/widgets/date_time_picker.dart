@@ -27,21 +27,6 @@ class DateTimePicker extends StatelessWidget {
         selectableDayPredicate: (DateTime day) {
           return true;
         },
-        builder: (BuildContext context, Widget? child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: Theme.of(context).primaryColor,
-                onPrimary: Colors.white,
-                surface: Theme.of(context).scaffoldBackgroundColor,
-                onSurface:
-                    Theme.of(context).textTheme.bodyLarge?.color ??
-                    Colors.black,
-              ),
-            ),
-            child: child!,
-          );
-        },
       );
 
       if (picked != null) {
@@ -59,28 +44,6 @@ class DateTimePicker extends StatelessWidget {
       final TimeOfDay? picked = await showTimePicker(
         context: context,
         initialTime: selectedTime ?? TimeOfDay.now(),
-        builder: (BuildContext context, Widget? child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: Theme.of(context).primaryColor,
-                onPrimary: Colors.white,
-                surface: Theme.of(context).scaffoldBackgroundColor,
-                onSurface:
-                    Theme.of(context).textTheme.bodyLarge?.color ??
-                    Colors.black,
-              ),
-            ),
-            child: MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                alwaysUse24HourFormat: MediaQuery.of(
-                  context,
-                ).alwaysUse24HourFormat,
-              ),
-              child: child!,
-            ),
-          );
-        },
       );
 
       if (picked != null) {

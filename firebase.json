@@ -1,13 +1,1 @@
-{
-  "hosting": {
-    "public": "build/web",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
-  },
-  "storage": {
-    "rules": "storage.rules"
-  }
-}
+{"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"]},"storage":{"rules":"storage.rules"},"flutter":{"platforms":{"android":{"default":{"projectId":"alttaskproject","appId":"1:706758504295:android:5bd432ed86ae8be33ec9c2","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"alttaskproject","configurations":{"android":"1:706758504295:android:5bd432ed86ae8be33ec9c2","web":"1:706758504295:web:ceb767fce28f917e3ec9c2"}}}}}}

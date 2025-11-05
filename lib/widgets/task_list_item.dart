@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:alttask/models/category.dart';
 import 'package:alttask/screens/todo_item.dart';
+import '../category_provider.dart';
 
 class TaskListItem extends StatelessWidget {
   final TodoItem item;
@@ -12,7 +15,7 @@ class TaskListItem extends StatelessWidget {
   final Function(bool?) onCompletionChanged;
   final TextEditingController titleController;
   final Function(DateTime?) onDateChanged;
-  final Function(TaskCategory?) onCategoryChanged;
+  final Function(String?) onCategoryChanged;
 
   const TaskListItem({
     super.key,
@@ -42,6 +45,9 @@ class TaskListItem extends StatelessWidget {
   }
 
   Widget _buildReadView(BuildContext context) {
+    final categoryProvider = Provider.of<CategoryProvider>(context);
+    final category = categoryProvider.categories.firstWhere((c) => c.id == item.categoryId, orElse: () => Category(id: 'personal', name: 'Personal', color: Colors.blue));
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Checkbox(
@@ -64,12 +70,12 @@ class TaskListItem extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(item.category.icon, size: 16, color: item.category.color),
+                Icon(Icons.circle, size: 16, color: category.color),
                 const SizedBox(width: 8.0),
                 Text(
-                  item.category.displayName,
+                  category.name,
                   style: TextStyle(
-                    color: item.category.color,
+                    color: category.color,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -110,6 +116,8 @@ class TaskListItem extends StatelessWidget {
   }
 
   Widget _buildEditView(BuildContext context) {
+    final categoryProvider = Provider.of<CategoryProvider>(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -173,17 +181,17 @@ class TaskListItem extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        DropdownButtonFormField<TaskCategory>(
-          initialValue: item.category,
-          items: TaskCategory.values
+        DropdownButtonFormField<String>(
+          initialValue: item.categoryId,
+          items: categoryProvider.categories
               .map(
                 (category) => DropdownMenuItem(
-                  value: category,
+                  value: category.id,
                   child: Row(
                     children: [
-                      Icon(category.icon, color: category.color),
+                      Icon(Icons.circle, color: category.color, size: 16),
                       const SizedBox(width: 8),
-                      Text(category.displayName),
+                      Text(category.name),
                     ],
                   ),
                 ),

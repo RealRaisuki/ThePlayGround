@@ -1,18 +1,26 @@
+
+import 'package:alttask/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
+import '../category_provider.dart';
 import '../theme_provider.dart';
 import 'todo_item.dart';
 import '../services/storage_service.dart';
 import '../widgets/date_time_picker.dart';
 import '../widgets/task_list_item.dart';
 import '../user/users.dart';
+import 'category_management_screen.dart';
 
 class TodoListScreen extends StatefulWidget {
   final User user;
-  final VoidCallback onLogout;
+  final ThemeProvider themeProvider;
 
-  const TodoListScreen({super.key, required this.user, required this.onLogout});
+  const TodoListScreen({
+    super.key,
+    required this.user,
+    required this.themeProvider,
+  });
 
   @override
   State<TodoListScreen> createState() => _TodoListScreenState();
@@ -86,11 +94,10 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   List<TodoItem> get _sortedTasks {
     if (_cachedSortedTasks != null) {
-      return _cachedSortedTasks!;
-    }
+      return _cachedSortedTasks!;}
 
     final now = DateTime.now();
-    final List<TodoItem> overdueTasks = [];
+    final List<TodoItem> dueTasks = [];
     final List<TodoItem> todayTasks = [];
     final List<TodoItem> tomorrowTasks = [];
     final List<TodoItem> upcomingTasks = [];
@@ -109,7 +116,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
       }
 
       if (task.isOverdue) {
-        overdueTasks.add(task);
+        dueTasks.add(task);
       } else {
         final taskDate = DateTime(
           task.dueDate!.year,
@@ -135,13 +142,13 @@ class _TodoListScreenState extends State<TodoListScreen> {
       return a.dueDate!.compareTo(b.dueDate!);
     }
 
-    overdueTasks.sort(sortByDueDate);
+    dueTasks.sort(sortByDueDate);
     todayTasks.sort(sortByDueDate);
     tomorrowTasks.sort(sortByDueDate);
     upcomingTasks.sort(sortByDueDate);
 
     _cachedSortedTasks = [
-      ...overdueTasks,
+      ...dueTasks,
       ...todayTasks,
       ...tomorrowTasks,
       ...upcomingTasks,
@@ -156,17 +163,21 @@ class _TodoListScreenState extends State<TodoListScreen> {
     if (_searchQuery.isEmpty) return _sortedTasks;
 
     if (_cachedFilteredTasks != null && _cachedSearchQuery == _searchQuery) {
-      return _cachedFilteredTasks!;
-    }
+      return _cachedFilteredTasks!;}
 
     _cachedSearchQuery = _searchQuery;
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
     _cachedFilteredTasks = _sortedTasks
         .where(
           (task) =>
               task.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              task.category.displayName.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ),
+              categoryProvider.categories
+                  .firstWhere((c) => c.id == task.categoryId)
+                  .name
+                  .toLowerCase()
+                  .contains(
+                    _searchQuery.toLowerCase(),
+                  ),
         )
         .toList();
 
@@ -188,9 +199,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   Widget _buildStatistics() {
     final totalTasks = _todoItems.length;
     final completedTasks = _todoItems.where((task) => task.isCompleted).length;
-    final overdueTasks = _todoItems
-        .where((task) => task.isOverdue && !task.isCompleted)
-        .length;
+    final dueTasks = _todoItems.where((task) => task.isOverdue && !task.isCompleted).length;
     final completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
 
     return AnimationConfiguration.staggeredList(
@@ -226,8 +235,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
                         Colors.green,
                       ),
                       _buildStatItem(
-                        'Overdue',
-                        overdueTasks.toString(),
+                        'Due',
+                        dueTasks.toString(),
                         Icons.warning,
                         Colors.red,
                       ),
@@ -311,6 +320,53 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
+  Widget _buildDivider(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: Colors.grey[400])),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: Colors.grey[400])),
+        ],
+      ),
+    );
+  }
+
+  String _getTaskGroup(TodoItem task) {
+    if (task.isCompleted) {
+      return 'Completed';
+    }
+    if (task.dueDate == null) {
+      return 'No Date';
+    }
+    if (task.isOverdue) {
+      return 'Due';
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final taskDate = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+
+    if (taskDate == today) {
+      return 'Today';
+    }
+    if (taskDate == tomorrow) {
+      return 'Tomorrow';
+    }
+    return 'Upcoming';
+  }
+
   Widget _buildTaskList(List<TodoItem> filteredTasks) {
     if (filteredTasks.isEmpty && _searchQuery.isNotEmpty) {
       return Center(
@@ -342,25 +398,35 @@ class _TodoListScreenState extends State<TodoListScreen> {
             () => TextEditingController(text: item.title),
           );
 
-          return TaskListItem(
-            item: item,
-            isEditing: _editingTaskId == item.id,
-            onEdit: () => _startEditing(item.id),
-            onSave: () => _saveEditing(item.id),
-            onCancel: _cancelEditing,
-            onDelete: () => _deleteTodoItem(item.id),
-            onCompletionChanged: (isCompleted) {
-              _toggleTodoItem(item.id, isCompleted ?? false);
-            },
-            titleController: _editingControllers[item.id]!,
-            onDateChanged: (newDate) {
-              _updateTask(item.id, dueDate: newDate);
-            },
-            onCategoryChanged: (newCategory) {
-              if (newCategory != null) {
-                _updateTask(item.id, category: newCategory);
-              }
-            },
+          final currentGroup = _getTaskGroup(item);
+          final previousGroup = index > 0 ? _getTaskGroup(filteredTasks[index - 1]) : null;
+
+          final bool showDivider = index == 0 || currentGroup != previousGroup;
+
+          return Column(
+            children: [
+              if (showDivider) _buildDivider(currentGroup),
+              TaskListItem(
+                item: item,
+                isEditing: _editingTaskId == item.id,
+                onEdit: () => _startEditing(item.id),
+                onSave: () => _saveEditing(item.id),
+                onCancel: _cancelEditing,
+                onDelete: () => _deleteTodoItem(item.id),
+                onCompletionChanged: (isCompleted) {
+                  _toggleTodoItem(item.id, isCompleted ?? false);
+                },
+                titleController: _editingControllers[item.id]!,
+                onDateChanged: (newDate) {
+                  _updateTask(item.id, dueDate: newDate);
+                },
+                onCategoryChanged: (newCategoryId) {
+                  if (newCategoryId != null) {
+                    _updateTask(item.id, categoryId: newCategoryId);
+                  }
+                },
+              ),
+            ],
           );
         },
       ),
@@ -369,14 +435,11 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final themeProvider = widget.themeProvider;
     final filteredTasks = _filteredTasks;
 
-    final platformBrightness = MediaQuery.of(context).platformBrightness;
-    final isCurrentlyDark =
-        (themeProvider.themeMode == ThemeMode.dark) ||
-        (themeProvider.themeMode == ThemeMode.system &&
-            platformBrightness == Brightness.dark);
+    final isCurrentlyDark = themeProvider.themeMode == ThemeMode.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -411,22 +474,28 @@ class _TodoListScreenState extends State<TodoListScreen> {
           IconButton(
             icon: Icon(isCurrentlyDark ? Icons.light_mode : Icons.dark_mode),
             onPressed: () {
-              final newTheme = isCurrentlyDark
-                  ? ThemeMode.light
-                  : ThemeMode.dark;
-              themeProvider.setThemeMode(newTheme);
+              themeProvider.toggleTheme();
             },
             tooltip: 'Toggle Theme',
           ),
-          IconButton(
-            icon: const Icon(Icons.brightness_auto),
-            onPressed: () => themeProvider.setThemeMode(ThemeMode.system),
-            tooltip: 'System Theme',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: widget.onLogout,
-            tooltip: 'Logout',
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                authService.signOut();
+              } else if (value == 'edit_categories') {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CategoryManagementScreen()));
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'edit_categories',
+                child: Text('Edit Categories'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('Logout'),
+              ),
+            ],
           ),
         ],
       ),
@@ -434,8 +503,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           ? _buildEmptyState()
           : Column(
               children: [
-                if (_todoItems.isNotEmpty && _searchQuery.isEmpty)
-                  _buildStatistics(),
+                if (_todoItems.isNotEmpty && _searchQuery.isEmpty) _buildStatistics(),
                 if (_searchQuery.isNotEmpty) _buildSearchInfo(filteredTasks),
                 Expanded(child: _buildTaskList(filteredTasks)),
               ],
@@ -447,7 +515,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
-  void _addTodoItem(String task, DateTime? dueDate, TaskCategory category) {
+  void _addTodoItem(String task, DateTime? dueDate, String categoryId) {
     if (task.trim().isNotEmpty) {
       setState(() {
         final newItem = TodoItem(
@@ -455,7 +523,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           title: task,
           isCompleted: false,
           dueDate: dueDate,
-          category: category,
+          categoryId: categoryId,
         );
         _todoItems.add(newItem);
         _editingControllers[newItem.id] = TextEditingController(
@@ -471,7 +539,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     String taskId, {
     String? title,
     DateTime? dueDate,
-    TaskCategory? category,
+    String? categoryId,
     bool? isCompleted,
   }) {
     setState(() {
@@ -480,7 +548,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
         _todoItems[taskIndex] = _todoItems[taskIndex].copyWith(
           title: title,
           dueDate: dueDate,
-          category: category,
+          categoryId: categoryId,
           isCompleted: isCompleted,
         );
         _invalidateCache();
@@ -526,7 +594,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
     final textController = TextEditingController();
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
-    TaskCategory selectedCategory = TaskCategory.personal;
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    var selectedCategory = categoryProvider.categories.first;
 
     showDialog(
       context: context,
@@ -558,24 +627,22 @@ class _TodoListScreenState extends State<TodoListScreen> {
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
-                          children: TaskCategory.values.map((category) {
+                          children: categoryProvider.categories.map((category) {
                             return ChoiceChip(
-                              label: Text(category.displayName),
-                              selected: selectedCategory == category,
+                              label: Text(category.name),
+                              selected: selectedCategory.id == category.id,
                               onSelected: (selected) {
-                                setState(() {
-                                  selectedCategory = category;
-                                });
+                                if (selected) {
+                                  setState(() {
+                                    selectedCategory = category;
+                                  });
+                                }
                               },
                               backgroundColor: category.color.withAlpha(25),
                               selectedColor: category.color.withAlpha(76),
                               labelStyle: TextStyle(
-                                color: selectedCategory == category
-                                    ? category.color
-                                    : Colors.grey[700],
-                                fontWeight: selectedCategory == category
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                                color: selectedCategory.id == category.id ? category.color : Colors.grey[700],
+                                fontWeight: selectedCategory.id == category.id ? FontWeight.bold : FontWeight.normal,
                               ),
                             );
                           }).toList(),
@@ -586,10 +653,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
                     DateTimePicker(
                       selectedDate: selectedDate,
                       selectedTime: selectedTime,
-                      onDateSelected: (date) =>
-                          setState(() => selectedDate = date),
-                      onTimeSelected: (time) =>
-                          setState(() => selectedTime = time),
+                      onDateSelected: (date) => setState(() => selectedDate = date),
+                      onTimeSelected: (time) => setState(() => selectedTime = time),
                       onClearSelection: () => setState(() {
                         selectedDate = null;
                         selectedTime = null;
@@ -607,19 +672,19 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   onPressed: () {
                     if (textController.text.trim().isNotEmpty) {
                       DateTime? combinedDateTime;
-                      if (selectedDate != null && selectedTime != null) {
+                      if (selectedDate != null) {
                         combinedDateTime = DateTime(
                           selectedDate!.year,
                           selectedDate!.month,
                           selectedDate!.day,
-                          selectedTime!.hour,
-                          selectedTime!.minute,
+                          selectedTime?.hour ?? 0,
+                          selectedTime?.minute ?? 0,
                         );
                       }
                       _addTodoItem(
                         textController.text,
                         combinedDateTime,
-                        selectedCategory,
+                        selectedCategory.id,
                       );
                       if (mounted) {
                         Navigator.of(context).pop();
