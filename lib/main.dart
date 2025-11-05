@@ -8,7 +8,6 @@ import 'theme_provider.dart';
 import 'category_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'user/users.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,17 +76,8 @@ class AuthWrapper extends StatelessWidget {
           );
         }
         if (snapshot.hasData) {
-          final fb_auth.User firebaseUser = snapshot.data!;
-          final User appUser = User(
-            id: firebaseUser.uid,
-            username: firebaseUser.email ?? '',
-            password: '', // Password is not available from firebase auth
-            personalCode:
-                '', // Personal code is not available from firebase auth
-            createdAt: firebaseUser.metadata.creationTime ?? DateTime.now(),
-          );
           return TodoListScreen(
-            user: appUser,
+            user: snapshot.data!,
             themeProvider: Provider.of<ThemeProvider>(context),
           );
         } else {

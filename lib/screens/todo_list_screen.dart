@@ -1,5 +1,5 @@
 
-import 'package:alttask/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
@@ -9,8 +9,8 @@ import 'todo_item.dart';
 import '../services/storage_service.dart';
 import '../widgets/date_time_picker.dart';
 import '../widgets/task_list_item.dart';
-import '../user/users.dart';
 import 'category_management_screen.dart';
+import '../services/auth_service.dart';
 
 class TodoListScreen extends StatefulWidget {
   final User user;
@@ -44,7 +44,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   @override
   void initState() {
     super.initState();
-    _storageService = StorageService(userId: widget.user.id);
+    _storageService = StorageService(userId: widget.user.uid);
     _loadTasks();
     _searchController.addListener(_onSearchChanged);
   }
@@ -455,7 +455,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 style: const TextStyle(color: Colors.white),
                 autofocus: true,
               )
-            : Text('Welcome ${widget.user.username}'),
+            : Text('Welcome ${widget.user.email}'),
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),

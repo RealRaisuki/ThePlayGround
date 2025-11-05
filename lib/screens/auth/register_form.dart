@@ -1,7 +1,6 @@
 
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import 'social_sign_in_button.dart';
 
 class RegisterForm extends StatelessWidget {
   final VoidCallback toggleForm;
@@ -38,10 +37,6 @@ class RegisterForm extends StatelessWidget {
           },
           style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           child: const Text('Register'),
-        ),
-        const SizedBox(height: 16),
-        SocialSignInButton(
-          onPressed: () => authService.signInWithGoogle(),
         ),
         const SizedBox(height: 16),
         TextButton(

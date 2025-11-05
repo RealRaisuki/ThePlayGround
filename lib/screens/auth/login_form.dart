@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'forgot_password_dialog.dart';
-import 'social_sign_in_button.dart';
 
 class LoginForm extends StatelessWidget {
   final VoidCallback toggleForm;
@@ -37,10 +36,6 @@ class LoginForm extends StatelessWidget {
           },
           style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
           child: const Text('Login'),
-        ),
-        const SizedBox(height: 16),
-        SocialSignInButton(
-          onPressed: () => authService.signInWithGoogle(),
         ),
         const SizedBox(height: 16),
         TextButton(
