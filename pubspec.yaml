@@ -1,3 +1,4 @@
+
 name: alttask
 description: "A smart to-do list application."
 # The following line prevents the package from being accidentally published to
@@ -32,15 +33,11 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.5.3
   flutter_staggered_animations: ^1.1.1
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   provider: ^6.1.5+1
   intl: ^0.20.2
-  google_fonts: ^6.3.2
-  firebase_auth: ^5.1.2
-  firebase_core: ^3.1.1
+  firebase_auth: ^5.7.0
+  firebase_core: ^3.15.2
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -55,9 +52,16 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   mockito: ^5.5.1
   build_runner: ^2.10.1
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/icon.png"
+  remove_alpha_ios: true
 
 # The following section is specific to Flutter packages.
 flutter:

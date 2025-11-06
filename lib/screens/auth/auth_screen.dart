@@ -29,15 +29,26 @@ class _AuthScreenState extends State<AuthScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 500),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: _showLoginForm
-                ? LoginForm(toggleForm: _toggleForm, authService: authService)
-                : RegisterForm(
-                    toggleForm: _toggleForm, authService: authService),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              Image.asset(
+                'assets/images/AltTaskLogo.png',
+                height: 190,
+              ),
+              const SizedBox(height: 48),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                child: _showLoginForm
+                    ? LoginForm(toggleForm: _toggleForm, authService: authService)
+                    : RegisterForm(
+                        toggleForm: _toggleForm, authService: authService),
+              ),
+            ],
           ),
         ),
       ),

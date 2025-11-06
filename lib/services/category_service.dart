@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/category.dart';
 
@@ -13,22 +12,16 @@ class CategoryService {
       final List<dynamic> decoded = jsonDecode(categoriesJson);
       return decoded.map((json) => Category.fromJson(json)).toList();
     } else {
-      return _createDefaultCategories();
+      return [];
     }
   }
 
   Future<void> saveCategories(List<Category> categories) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<Map<String, dynamic>> encoded = categories.map((c) => c.toJson()).toList();
+    final List<Map<String, dynamic>> encoded = categories
+        .map((c) => c.toJson())
+        .toList();
     await prefs.setString(_categoriesKey, jsonEncode(encoded));
-  }
-
-  List<Category> _createDefaultCategories() {
-    return [
-      Category(id: 'personal', name: 'Personal', color: Colors.blue),
-      Category(id: 'work', name: 'Work', color: Colors.green),
-      Category(id: 'shopping', name: 'Shopping', color: Colors.orange),
-    ];
   }
 
   Future<void> addCategory(Category category) async {

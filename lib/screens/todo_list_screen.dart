@@ -1,15 +1,15 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../category_provider.dart';
+import '../models/category.dart';
 import '../theme_provider.dart';
 import 'todo_item.dart';
 import '../services/storage_service.dart';
 import '../widgets/date_time_picker.dart';
 import '../widgets/task_list_item.dart';
-import 'category_management_screen.dart';
 import '../services/auth_service.dart';
 
 class TodoListScreen extends StatefulWidget {
@@ -94,7 +94,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   List<TodoItem> get _sortedTasks {
     if (_cachedSortedTasks != null) {
-      return _cachedSortedTasks!;}
+      return _cachedSortedTasks!;
+    }
 
     final now = DateTime.now();
     final List<TodoItem> dueTasks = [];
@@ -163,21 +164,26 @@ class _TodoListScreenState extends State<TodoListScreen> {
     if (_searchQuery.isEmpty) return _sortedTasks;
 
     if (_cachedFilteredTasks != null && _cachedSearchQuery == _searchQuery) {
-      return _cachedFilteredTasks!;}
+      return _cachedFilteredTasks!;
+    }
 
     _cachedSearchQuery = _searchQuery;
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
     _cachedFilteredTasks = _sortedTasks
         .where(
           (task) =>
               task.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              categoryProvider.categories
-                  .firstWhere((c) => c.id == task.categoryId)
-                  .name
-                  .toLowerCase()
-                  .contains(
-                    _searchQuery.toLowerCase(),
-                  ),
+              (categoryProvider.categories.any(
+                    (c) => c.id == task.categoryId,
+                  ) &&
+                  categoryProvider.categories
+                      .firstWhere((c) => c.id == task.categoryId)
+                      .name
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase())),
         )
         .toList();
 
@@ -199,7 +205,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
   Widget _buildStatistics() {
     final totalTasks = _todoItems.length;
     final completedTasks = _todoItems.where((task) => task.isCompleted).length;
-    final dueTasks = _todoItems.where((task) => task.isOverdue && !task.isCompleted).length;
+    final dueTasks = _todoItems
+        .where((task) => task.isOverdue && !task.isCompleted)
+        .length;
     final completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
 
     return AnimationConfiguration.staggeredList(
@@ -356,7 +364,11 @@ class _TodoListScreenState extends State<TodoListScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
-    final taskDate = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+    final taskDate = DateTime(
+      task.dueDate!.year,
+      task.dueDate!.month,
+      task.dueDate!.day,
+    );
 
     if (taskDate == today) {
       return 'Today';
@@ -399,7 +411,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
           );
 
           final currentGroup = _getTaskGroup(item);
-          final previousGroup = index > 0 ? _getTaskGroup(filteredTasks[index - 1]) : null;
+          final previousGroup = index > 0
+              ? _getTaskGroup(filteredTasks[index - 1])
+              : null;
 
           final bool showDivider = index == 0 || currentGroup != previousGroup;
 
@@ -478,24 +492,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
             },
             tooltip: 'Toggle Theme',
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'logout') {
-                authService.signOut();
-              } else if (value == 'edit_categories') {
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CategoryManagementScreen()));
-              }
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              authService.signOut();
             },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'edit_categories',
-                child: Text('Edit Categories'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Text('Logout'),
-              ),
-            ],
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -503,7 +505,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
           ? _buildEmptyState()
           : Column(
               children: [
-                if (_todoItems.isNotEmpty && _searchQuery.isEmpty) _buildStatistics(),
+                if (_todoItems.isNotEmpty && _searchQuery.isEmpty)
+                  _buildStatistics(),
                 if (_searchQuery.isNotEmpty) _buildSearchInfo(filteredTasks),
                 Expanded(child: _buildTaskList(filteredTasks)),
               ],
@@ -590,110 +593,318 @@ class _TodoListScreenState extends State<TodoListScreen> {
     _updateTask(taskId, isCompleted: isCompleted);
   }
 
+  void _showAddCategoryDialog(BuildContext context) {
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
+    final nameController = TextEditingController();
+    Color selectedColor = Colors.blue;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Category'),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Category Name',
+                    ),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Text('Color:'),
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: () async {
+                          final color = await _showColorPicker(
+                            context,
+                            selectedColor,
+                          );
+                          if (color != null) {
+                            setState(() {
+                              selectedColor = color;
+                            });
+                          }
+                        },
+                        child: CircleAvatar(
+                          backgroundColor: selectedColor,
+                          radius: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text;
+                if (name.isNotEmpty) {
+                  categoryProvider.addCategory(
+                    Category(
+                      id: DateTime.now().toString(),
+                      name: name,
+                      color: selectedColor,
+                    ),
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<Color?> _showColorPicker(BuildContext context, Color initialColor) {
+    return showDialog<Color>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Pick a color'),
+          content: SingleChildScrollView(
+            child: BlockPicker(
+              pickerColor: initialColor,
+              onColorChanged: (color) {
+                Navigator.of(context).pop(color);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteCategoryDialog(BuildContext context, Category category) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Category'),
+          content: Text(
+            'Are you sure you want to delete the "${category.name}" category? All tasks associated with it will also be deleted.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _deleteCategory(category.id);
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteCategory(String categoryId) {
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
+    setState(() {
+      _todoItems.removeWhere((item) => item.categoryId == categoryId);
+      categoryProvider.deleteCategory(categoryId);
+      _invalidateCache();
+    });
+    _saveTasks();
+  }
+
   void _displayAddDialog() {
     final textController = TextEditingController();
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-    var selectedCategory = categoryProvider.categories.first;
+    final categoryProvider = Provider.of<CategoryProvider>(
+      context,
+      listen: false,
+    );
+    Category? selectedCategory = categoryProvider.categories.isNotEmpty
+        ? categoryProvider.categories.first
+        : null;
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Add a new task'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: textController,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter your task...',
-                        border: OutlineInputBorder(),
-                      ),
-                      autofocus: true,
-                    ),
-                    const SizedBox(height: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            void anableButton() => setState(() {});
+            textController.addListener(anableButton);
+            return Consumer<CategoryProvider>(
+              builder: (context, catProvider, child) {
+                if (selectedCategory == null &&
+                    catProvider.categories.isNotEmpty) {
+                  selectedCategory = catProvider.categories.first;
+                }
+
+                return AlertDialog(
+                  title: const Text('Add a new task'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Category:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        TextField(
+                          controller: textController,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter your task...',
+                            border: OutlineInputBorder(),
+                          ),
+                          autofocus: true,
                         ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: categoryProvider.categories.map((category) {
-                            return ChoiceChip(
-                              label: Text(category.name),
-                              selected: selectedCategory.id == category.id,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setState(() {
-                                    selectedCategory = category;
-                                  });
-                                }
-                              },
-                              backgroundColor: category.color.withAlpha(25),
-                              selectedColor: category.color.withAlpha(76),
-                              labelStyle: TextStyle(
-                                color: selectedCategory.id == category.id ? category.color : Colors.grey[700],
-                                fontWeight: selectedCategory.id == category.id ? FontWeight.bold : FontWeight.normal,
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Category:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add),
+                                  onPressed: () {
+                                    _showAddCategoryDialog(context);
+                                  },
+                                  tooltip: 'Add Category',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (catProvider.categories.isEmpty)
+                              const Text(
+                                'No categories available. Please add one.',
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                children: catProvider.categories.map((
+                                  category,
+                                ) {
+                                  return GestureDetector(
+                                    onLongPress: () =>
+                                        _showDeleteCategoryDialog(
+                                          context,
+                                          category,
+                                        ),
+                                    child: ChoiceChip(
+                                      label: Text(category.name),
+                                      selected:
+                                          selectedCategory?.id == category.id,
+                                      onSelected: (selected) {
+                                        if (selected) {
+                                          setState(() {
+                                            selectedCategory = category;
+                                          });
+                                        }
+                                      },
+                                      backgroundColor: category.color.withAlpha(
+                                        25,
+                                      ),
+                                      selectedColor: category.color.withAlpha(
+                                        76,
+                                      ),
+                                      labelStyle: TextStyle(
+                                        color:
+                                            selectedCategory?.id == category.id
+                                            ? category.color
+                                            : Colors.grey[700],
+                                        fontWeight:
+                                            selectedCategory?.id == category.id
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            );
-                          }).toList(),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        DateTimePicker(
+                          selectedDate: selectedDate,
+                          selectedTime: selectedTime,
+                          onDateSelected: (date) =>
+                              setState(() => selectedDate = date),
+                          onTimeSelected: (time) =>
+                              setState(() => selectedTime = time),
+                          onClearSelection: () => setState(() {
+                            selectedDate = null;
+                            selectedTime = null;
+                          }),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    DateTimePicker(
-                      selectedDate: selectedDate,
-                      selectedTime: selectedTime,
-                      onDateSelected: (date) => setState(() => selectedDate = date),
-                      onTimeSelected: (time) => setState(() => selectedTime = time),
-                      onClearSelection: () => setState(() {
-                        selectedDate = null;
-                        selectedTime = null;
-                      }),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          textController.text.trim().isNotEmpty &&
+                              selectedCategory != null
+                          ? () {
+                              DateTime? combinedDateTime;
+                              if (selectedDate != null) {
+                                combinedDateTime = DateTime(
+                                  selectedDate!.year,
+                                  selectedDate!.month,
+                                  selectedDate!.day,
+                                  selectedTime?.hour ?? 0,
+                                  selectedTime?.minute ?? 0,
+                                );
+                              } else if (selectedTime != null) {
+                                final now = DateTime.now();
+                                combinedDateTime = DateTime(
+                                  now.year,
+                                  now.month,
+                                  now.day,
+                                  selectedTime!.hour,
+                                  selectedTime!.minute,
+                                );
+                              }
+                              _addTodoItem(
+                                textController.text,
+                                combinedDateTime,
+                                selectedCategory!.id,
+                              );
+                              if (mounted) {
+                                textController.removeListener(anableButton);
+                                textController.dispose();
+                                Navigator.of(context).pop();
+                              }
+                            }
+                          : null, // Button is disabled
+                      child: const Text('Add'),
                     ),
                   ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (textController.text.trim().isNotEmpty) {
-                      DateTime? combinedDateTime;
-                      if (selectedDate != null) {
-                        combinedDateTime = DateTime(
-                          selectedDate!.year,
-                          selectedDate!.month,
-                          selectedDate!.day,
-                          selectedTime?.hour ?? 0,
-                          selectedTime?.minute ?? 0,
-                        );
-                      }
-                      _addTodoItem(
-                        textController.text,
-                        combinedDateTime,
-                        selectedCategory.id,
-                      );
-                      if (mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    }
-                  },
-                  child: const Text('Add'),
-                ),
-              ],
+                );
+              },
             );
           },
         );
