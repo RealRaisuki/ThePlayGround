@@ -46,6 +46,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
     super.initState();
     _storageService = StorageService(userId: widget.user.uid);
     _loadTasks();
+    Provider.of<CategoryProvider>(context, listen: false)
+        .loadCategories(widget.user.uid);
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -661,6 +663,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                       name: name,
                       color: selectedColor,
                     ),
+                    widget.user.uid,
                   );
                   Navigator.of(context).pop();
                 }
@@ -727,7 +730,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
     setState(() {
       _todoItems.removeWhere((item) => item.categoryId == categoryId);
-      categoryProvider.deleteCategory(categoryId);
+      categoryProvider.deleteCategory(categoryId, widget.user.uid);
       _invalidateCache();
     });
     _saveTasks();
@@ -830,12 +833,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                       labelStyle: TextStyle(
                                         color:
                                             selectedCategory?.id == category.id
-                                            ? category.color
-                                            : Colors.grey[700],
+                                                ? category.color
+                                                : Colors.grey[700],
                                         fontWeight:
                                             selectedCategory?.id == category.id
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
                                       ),
                                     ),
                                   );
@@ -867,39 +870,39 @@ class _TodoListScreenState extends State<TodoListScreen> {
                     ElevatedButton(
                       onPressed:
                           textController.text.trim().isNotEmpty &&
-                              selectedCategory != null
-                          ? () {
-                              DateTime? combinedDateTime;
-                              if (selectedDate != null) {
-                                combinedDateTime = DateTime(
-                                  selectedDate!.year,
-                                  selectedDate!.month,
-                                  selectedDate!.day,
-                                  selectedTime?.hour ?? 0,
-                                  selectedTime?.minute ?? 0,
-                                );
-                              } else if (selectedTime != null) {
-                                final now = DateTime.now();
-                                combinedDateTime = DateTime(
-                                  now.year,
-                                  now.month,
-                                  now.day,
-                                  selectedTime!.hour,
-                                  selectedTime!.minute,
-                                );
-                              }
-                              _addTodoItem(
-                                textController.text,
-                                combinedDateTime,
-                                selectedCategory!.id,
-                              );
-                              if (mounted) {
-                                textController.removeListener(anableButton);
-                                textController.dispose();
-                                Navigator.of(context).pop();
-                              }
-                            }
-                          : null, // Button is disabled
+                                  selectedCategory != null
+                              ? () {
+                                  DateTime? combinedDateTime;
+                                  if (selectedDate != null) {
+                                    combinedDateTime = DateTime(
+                                      selectedDate!.year,
+                                      selectedDate!.month,
+                                      selectedDate!.day,
+                                      selectedTime?.hour ?? 0,
+                                      selectedTime?.minute ?? 0,
+                                    );
+                                  } else if (selectedTime != null) {
+                                    final now = DateTime.now();
+                                    combinedDateTime = DateTime(
+                                      now.year,
+                                      now.month,
+                                      now.day,
+                                      selectedTime!.hour,
+                                      selectedTime!.minute,
+                                    );
+                                  }
+                                  _addTodoItem(
+                                    textController.text,
+                                    combinedDateTime,
+                                    selectedCategory!.id,
+                                  );
+                                  if (mounted) {
+                                    textController.removeListener(anableButton);
+                                    textController.dispose();
+                                    Navigator.of(context).pop();
+                                  }
+                                }
+                              : null, // Button is disabled
                       child: const Text('Add'),
                     ),
                   ],

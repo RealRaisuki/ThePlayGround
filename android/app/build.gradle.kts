@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.Copy
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -44,4 +46,16 @@ android {
 
 flutter {
     source = "../.."
+}
+
+tasks.register("copyReleaseApk", Copy::class) {
+    from("build/app/outputs/flutter-apk")
+    into("../../release_builds")
+    include("app-release.apk")
+}
+
+project.afterEvaluate {
+    tasks.named("assembleRelease") {
+        finalizedBy("copyReleaseApk")
+    }
 }

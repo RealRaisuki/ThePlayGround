@@ -8,23 +8,23 @@ class CategoryProvider with ChangeNotifier {
 
   List<Category> get categories => _categories;
 
-  Future<void> loadCategories() async {
-    _categories = await _categoryService.loadCategories();
+  Future<void> loadCategories(String userId) async {
+    _categories = await _categoryService.loadCategories(userId);
     notifyListeners();
   }
 
-  Future<void> addCategory(Category category) async {
-    await _categoryService.addCategory(category);
-    await loadCategories();
+  Future<void> addCategory(Category category, String userId) async {
+    await _categoryService.addCategory(category, userId);
+    await loadCategories(userId);
   }
 
-  Future<void> updateCategory(Category category) async {
-    await _categoryService.updateCategory(category);
-    await loadCategories();
+  Future<void> updateCategory(Category category, String userId) async {
+    await _categoryService.updateCategory(category, userId);
+    await loadCategories(userId);
   }
 
-  Future<void> deleteCategory(String categoryId) async {
-    await _categoryService.deleteCategory(categoryId);
-    await loadCategories();
+  Future<void> deleteCategory(String categoryId, String userId) async {
+    await _categoryService.deleteCategory(categoryId, userId);
+    await loadCategories(userId);
   }
 }
